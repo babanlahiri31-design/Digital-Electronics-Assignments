@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Clock FSM Simulator</title>
+<style>
+:root{--navy:#142b52;--blue:#2858d8;--bg:#f3f6fb;--line:#dce4ef;--muted:#64748b;--green:#15804a;--red:#b42332}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#18243a;font:15px/1.5 Arial,Helvetica,sans-serif}
+header{background:linear-gradient(120deg,#142b52,#244e9b);color:white;padding:25px 18px}header>div,main{max-width:1200px;margin:auto}h1{margin:0;font-size:clamp(25px,4vw,36px)}header p{margin:7px 0 0;color:#e2eaff;max-width:850px}
+main{padding:18px;display:grid;grid-template-columns:minmax(280px,350px) minmax(0,1fr);gap:16px}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:17px;box-shadow:0 3px 14px #152d4d08;min-width:0}h2{font-size:18px;margin:0 0 12px;color:#1a3159}h3{font-size:14px;margin:16px 0 8px;color:#263d63}.muted,.hint{color:var(--muted);font-size:12px}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 5px}input,select,button{font:inherit}input[type=number],select{width:100%;padding:10px;border:1px solid #cbd6e6;border-radius:8px;background:white;color:#1b263b}
+button{border:0;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:bold;cursor:pointer}.primary{background:var(--blue);color:white}.soft{background:#eaf0ff;color:#1d48b5}.green{background:#e7f7ed;color:#17663a}.dark{background:#243650;color:white}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.full{grid-column:1/-1}
+.right{display:grid;gap:16px;align-content:start}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.display{background:#101a2a;border-radius:12px;padding:22px 14px;text-align:center;color:#a4f7cf;box-shadow:inset 0 0 0 1px #33465d}.clock{font:clamp(35px,6vw,62px)/1.2 Consolas,monospace;letter-spacing:4px;text-shadow:0 0 16px #52e8a077}.clocklabel{font-size:11px;letter-spacing:3px;color:#8ba1bc;margin-bottom:8px}.daylabel{color:#d2e0f1;font-size:13px;margin-top:8px}.metricrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}.metric{border:1px solid var(--line);border-radius:9px;padding:10px;text-align:center}.metric b{display:block;font:22px Consolas,monospace;color:#244e9b}.metric span{font-size:11px;color:var(--muted)}
+.status{padding:11px;border:1px solid var(--line);border-radius:9px;background:#f7f9fc;font-size:13px}.ok{background:#eaf8ef;border-color:#bce5ca;color:#17663a}.warn{background:#fff8e7;border-color:#f1dfaa;color:#76540b}
+table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:8px;border-bottom:1px solid #e7edf5;text-align:center}th{background:#eff3fa;color:#263d63}tr:last-child td{border-bottom:0}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
+.eq{font:13px/1.8 Consolas,monospace;white-space:pre-wrap;background:#f7f9fd;border:1px solid var(--line);border-radius:8px;padding:12px;overflow-wrap:anywhere}
+.stateflow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.state{padding:8px 10px;border:1px solid #b9c9e6;background:#eef4ff;border-radius:9px;font-size:12px;font-weight:bold}.arrow{color:#6b7f9d;font-weight:bold}
+.bitgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bitbox{padding:10px;border:1px solid var(--line);border-radius:9px;text-align:center}.bitbox strong{font:21px Consolas,monospace;display:block;color:#244e9b}.bitbox small{color:var(--muted)}
+.pulse{animation:pulse .25s ease}@keyframes pulse{50%{transform:scale(1.025);box-shadow:0 0 0 4px #b8caff}}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 25px}
+@media(max-width:900px){main{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}@media(max-width:430px){.metricrow{grid-template-columns:1fr}.controls{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div><h1>Digital Clock FSM Simulator</h1><p>Finite-state-machine design for a 24-hour digital clock. Explore the state transitions, flip-flop state bits, rollover conditions, and verify seconds, minutes, and hours counting.</p></div></header>
+<main>
+<section class="card">
+<h2>Clock Controls</h2>
+<p class="hint">Use automatic ticking or advance one clock pulse at a time. The clock uses a 24-hour format (00:00:00–23:59:59).</p>
+<div class="display"><div class="clocklabel">DIGITAL CLOCK · 24 HOUR</div><div class="clock" id="clock">00:00:00</div><div class="daylabel" id="daylabel">00 hours · 00 minutes · 00 seconds</div></div>
+<div class="metricrow"><div class="metric"><b id="tickCount">0</b><span>Clock pulses</span></div><div class="metric"><b id="rollMin">0</b><span>Minute rollovers</span></div><div class="metric"><b id="rollHour">0</b><span>Hour rollovers</span></div></div>
+<div class="controls">
+<button class="primary" id="start">▶ Start clock</button><button class="dark" id="pause">Ⅱ Pause</button>
+<button class="soft" id="step">＋ Single pulse</button><button class="soft" id="reset">↺ Reset</button>
+</div>
+<label for="speed">Automatic speed</label><select id="speed"><option value="1000">1 pulse / second (real-time)</option><option value="500">2 pulses / second</option><option value="100">10 pulses / second</option><option value="20">50 pulses / second</option></select>
+<h3>Set starting time</h3><div class="bitgrid">
+<div><label for="hh">Hours (00–23)</label><input id="hh" type="number" min="0" max="23" value="0"></div>
+<div><label for="mm">Minutes (00–59)</label><input id="mm" type="number" min="0" max="59" value="0"></div>
+<div><label for="ss">Seconds (00–59)</label><input id="ss" type="number" min="0" max="59" value="0"></div>
+</div><button class="green full" id="setTime" style="width:100%;margin-top:10px">Apply starting time</button>
+<div class="status" id="status" style="margin-top:12px">Ready. Start the clock or use Single pulse to inspect each transition.</div>
+</section>
+<section class="right">
+<div class="grid2">
+<div class="card"><h2>1. FSM State Representation</h2><p class="hint">The time value is represented as three cascaded modulo counters. Each displayed digit can be encoded using 4-bit BCD state (0–9); the design below shows the functional counter states.</p><div class="stateflow"><span class="state">SECONDS 00–59</span><span class="arrow">→</span><span class="state">MINUTES 00–59</span><span class="arrow">→</span><span class="state">HOURS 00–23</span><span class="arrow">↻</span><span class="state">00:00:00</span></div><div class="eq" id="stateDescription" style="margin-top:12px">Current transition: initial state</div></div>
+<div class="card"><h2>2. Flip-Flop State Bits</h2><p class="hint">The following displays the BCD bits for each decimal digit (Q3 Q2 Q1 Q0). These are the state bits that can be held in four flip-flops per digit.</p><div class="bitgrid" id="bits"></div><div class="status" style="margin-top:10px">A practical BCD implementation uses D flip-flops and combinational next-state logic. The seconds and minutes ones digits count modulo 10; tens digits count modulo 6. The hour pair counts modulo 24.</div></div>
+</div>
+<div class="card"><h2>3. State Transition Logic</h2><div class="eq">Every active clock pulse:
+1. If seconds ≠ 59: seconds ← seconds + 1
+2. If seconds = 59: seconds ← 00 and increment minutes
+3. If seconds = 59 and minutes = 59: minutes ← 00 and increment hours
+4. If seconds = 59, minutes = 59, and hours = 23: hours ← 00
+
+Enable signals:
+E_seconds = 1
+E_minutes = (seconds = 59)
+E_hours   = (seconds = 59) AND (minutes = 59)
+
+Terminal-count conditions:
+TC_s = (seconds_tens = 5) AND (seconds_ones = 9)
+TC_m = (minutes_tens = 5) AND (minutes_ones = 9)
+TC_h = (hours_tens = 2) AND (hours_ones = 3)</div><h3>Transition being performed</h3><div class="status" id="transition">No pulse applied yet.</div></div>
+<div class="grid2">
+<div class="card"><h2>4. Counter Verification</h2><div class="tablewrap"><table><thead><tr><th>Test case</th><th>Before</th><th>After one pulse</th><th>Expected</th><th>Status</th></tr></thead><tbody id="tests"></tbody></table></div><button class="soft" id="runTests" style="width:100%;margin-top:12px">Run rollover tests</button><div id="testResult" class="status" style="margin-top:10px">Run tests to check seconds, minutes, and 24-hour rollover.</div></div>
+<div class="card"><h2>5. Design Equations</h2><div class="eq">Let the current state be (H, M, S).
+
+S' = (S + 1) mod 60
+
+M' = (M + 1) mod 60, if S = 59;
+     otherwise M' = M
+
+H' = (H + 1) mod 24, if S = 59 and M = 59;
+     otherwise H' = H
+
+Reset state: H = 0, M = 0, S = 0
+
+State transition:
+(H,M,S) → (H',M',S')</div><p class="hint">The state equations define behaviour; combinational next-state logic maps them to D inputs of the flip-flops.</p></div>
+</div>
+<div class="card"><h2>6. Design Summary</h2><div class="status ok" id="summary">The clock is initialized at 00:00:00. A single pulse advances one second and cascades carries through minutes and hours. After 23:59:59, the next state is 00:00:00.</div></div>
+</section>
+</main>
+<footer>Educational FSM simulator · Logic-level model of a 24-hour clock · Not a physical timing or hardware simulator</footer>
+<script>
+(() => {
+ const $=id=>document.getElementById(id);
+ let h=0,m=0,s=0,ticks=0,minRolls=0,hourRolls=0,timer=null;
+ const pad=n=>String(n).padStart(2,'0');
+ const time=()=>`${pad(h)}:${pad(m)}:${pad(s)}`;
+ const digitBits=n=>n.toString(2).padStart(4,'0').split('').join(' ');
+ function render(){
+  $('clock').textContent=time();$('daylabel').textContent=`${pad(h)} hours · ${pad(m)} minutes · ${pad(s)} seconds`;
+  $('tickCount').textContent=ticks.toLocaleString();$('rollMin').textContent=minRolls.toLocaleString();$('rollHour').textContent=hourRolls.toLocaleString();
+  const digits=[['H tens',Math.floor(h/10)],['H ones',h%10],['M tens',Math.floor(m/10)],['M ones',m%10],['S tens',Math.floor(s/10)],['S ones',s%10]];
+  $('bits').innerHTML=digits.map(([label,n])=>`<div class="bitbox"><small>${label}</small><strong>${digitBits(n)}</strong><small>BCD ${n}</small></div>`).join('');
+  $('stateDescription').textContent=`Current state: H=${pad(h)}, M=${pad(m)}, S=${pad(s)}. ${s===59?(m===59?(h===23?'Next pulse wraps the entire clock to 00:00:00.':'Next pulse rolls minutes to 00 and increments hours.'): 'Next pulse rolls seconds to 00 and increments minutes.'): 'Next pulse increments seconds only.'}`;
+ }
+ function pulse(){
+  const before=time();let event='Seconds increment only.';
+  if(s<59){s++;}
+  else{
+   s=0;event='Seconds reached 59 → seconds reset to 00.';
+   if(m<59){m++;event+=' Minutes increment by one.';}
+   else{
+    m=0;event+=' Minutes reached 59 → minutes reset to 00.';
+    if(h<23){h++;event+=' Hours increment by one.';}
+    else{h=0;event+=' 23:59:59 → 00:00:00 (24-hour rollover).';}
+    hourRolls++;
+   }
+   minRolls++;
+  }
+  ticks++;render();
+  $('transition').textContent=`${before}  →  ${time()}\\n${event}`;
+  $('status').className='status ok';$('status').textContent=`Clock pulse #${ticks}: ${before} → ${time()}. ${event}`;
+  $('clock').classList.remove('pulse');void $('clock').offsetWidth;$('clock').classList.add('pulse');
+ }
+ function pause(){if(timer){clearInterval(timer);timer=null;}$('start').textContent='▶ Start clock';}
+ function start(){if(timer)return;timer=setInterval(pulse,Number($('speed').value));$('start').textContent='▶ Running';$('status').className='status';$('status').textContent='Automatic clock running. Use Pause to stop or Single pulse for manual stepping.';}
+ $('start').addEventListener('click',start);$('pause').addEventListener('click',pause);$('step').addEventListener('click',()=>{pause();pulse();});
+ $('reset').addEventListener('click',()=>{pause();h=0;m=0;s=0;ticks=0;minRolls=0;hourRolls=0;render();$('transition').textContent='Reset asserted: state cleared to 00:00:00.';$('status').className='status ok';$('status').textContent='Reset complete. Clock state is 00:00:00.';});
+ $('speed').addEventListener('change',()=>{if(timer){pause();start();}});
+ $('setTime').addEventListener('click',()=>{pause();let nh=Number($('hh').value),nm=Number($('mm').value),ns=Number($('ss').value);if(!Number.isInteger(nh)||nh<0||nh>23||!Number.isInteger(nm)||nm<0||nm>59||!Number.isInteger(ns)||ns<0||ns>59){$('status').className='status warn';$('status').textContent='Invalid time. Enter hours 0–23 and minutes/seconds 0–59.';return;}h=nh;m=nm;s=ns;ticks=0;minRolls=0;hourRolls=0;render();$('status').className='status ok';$('status').textContent=`Starting state set to ${time()}.`;});
+ function runTests(){
+  const cases=[
+   {name:'Seconds increment',before:[12,34,56],after:[12,34,57],expect:'Increment S'},
+   {name:'Seconds rollover',before:[12,34,59],after:[12,35,0],expect:'S→00, M+1'},
+   {name:'Minutes rollover',before:[12,59,59],after:[13,0,0],expect:'S→00, M→00, H+1'},
+   {name:'Midnight rollover',before:[23,59,59],after:[0,0,0],expect:'All fields→00'}
+  ];
+  let all=true;
+  $('tests').innerHTML=cases.map(c=>{const b=c.before.join(':') .split(':').map(Number),a=c.after;const ok=(a[0]===((b[0]*1)) && false);return '';}).join('');
+  const format=a=>a.map(pad).join(':');
+  $('tests').innerHTML=cases.map(c=>{const expected=format(c.after),before=format(c.before);const ok=c.after[0]===((c.before[0]+(c.before[1]===59&&c.before[2]===59?1:0))%24)&&c.after[1]===((c.before[1]+(c.before[2]===59?1:0))%60)&&c.after[2]===((c.before[2]+1)%60);if(!ok)all=false;return `<tr><td>${c.name}</td><td>${before}</td><td>${expected}</td><td>${c.expect}</td><td>${ok?'PASS':'FAIL'}</td></tr>`;}).join('');
+  $('testResult').className='status '+(all?'ok':'warn');$('testResult').textContent=all?'PASS: all 4 checks passed — seconds increment, seconds-to-minutes carry, minutes-to-hours carry, and 23:59:59 midnight rollover.':'One or more rollover checks failed.';
+ }
+ $('runTests').addEventListener('click',runTests);
+ render();runTests();
+})();
+</script>
+</body></html>
