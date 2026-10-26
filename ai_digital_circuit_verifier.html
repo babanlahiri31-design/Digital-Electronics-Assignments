@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI Digital Circuit Verifier</title>
+<style>
+:root{--navy:#17366d;--blue:#2457d6;--line:#dce4ef;--muted:#63718a;--bg:#f3f6fb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#1b263b;font:15px/1.5 Arial,Helvetica,sans-serif}
+header{background:var(--navy);color:white;padding:24px 18px}header>div,main{max-width:1200px;margin:auto}h1{font-size:clamp(24px,4vw,34px);margin:0}header p{margin:7px 0 0;color:#e0eaff}
+main{padding:18px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px}.card{background:white;border:1px solid var(--line);border-radius:13px;padding:16px;min-width:0;box-shadow:0 3px 12px #142c5008}h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:16px 0 8px}.muted,.hint{font-size:12px;color:var(--muted)}
+label{display:block;font-size:13px;font-weight:bold;margin:10px 0 5px}select,input,textarea,button{font:inherit}select,input[type=text],textarea{width:100%;padding:10px;border:1px solid #cbd6e6;border-radius:8px;background:white;color:#1b263b}textarea{min-height:90px;resize:vertical}
+button{border:0;border-radius:8px;padding:10px 12px;font-size:13px;font-weight:bold;cursor:pointer}.primary{background:var(--blue);color:white}.soft{background:#eaf0ff;color:#1d48b5}.green{background:#e7f7ed;color:#17663a}.danger{background:#ffeded;color:#a92323}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.right{display:grid;grid-template-columns:1fr 1fr;gap:16px}.wide{grid-column:1/-1}.status{padding:11px;margin-top:10px;border:1px solid var(--line);border-radius:8px;background:#f5f7fb;font-size:13px}.ok{background:#eaf8ef;border-color:#bce5ca;color:#17663a}.bad{background:#fff0f0;border-color:#f0caca;color:#a32129}.warn{background:#fff8e7;border-color:#f1dfaa;color:#76540b}
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}.choice label{margin:0;padding:12px;border:1px solid var(--line);border-radius:9px;background:#f9fbff;cursor:pointer}.choice input{margin-right:6px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:8px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;text-align:center;border-bottom:1px solid #e7edf5;white-space:nowrap}th{background:#eff3fa}tr:last-child td{border-bottom:0}td input{width:55px!important;padding:7px!important;text-align:center}
+.eq{font:13px/1.9 Consolas,monospace;white-space:pre-wrap;background:#f7f9fd;border:1px solid var(--line);border-radius:8px;padding:11px;overflow-wrap:anywhere}.preview{display:none;max-width:100%;max-height:360px;margin:12px auto;border:1px solid var(--line);border-radius:8px}.gateflow{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:12px 0}.gate{border:2px solid var(--blue);background:#eef4ff;border-radius:8px;padding:10px 12px;font-weight:bold}.wire{height:2px;min-width:16px;flex:1;background:var(--blue)}.pill{display:inline-block;border-radius:20px;background:#eaf0ff;color:#1d48b5;padding:4px 9px;font-size:11px;font-weight:bold}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 15px 24px}
+@media(max-width:900px){main{grid-template-columns:1fr}.right{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style></head>
+<body>
+<header><div><h1>AI Digital Circuit Verifier</h1><p>Specify the intended logic, then verify a circuit screenshot or a truth table against it.</p></div></header>
+<main>
+<section class="card">
+<h2>1. Desired circuit behaviour</h2>
+<label for="specMode">How do you want to describe the correct circuit?</label>
+<select id="specMode"><option value="type">Choose a circuit type</option><option value="sop">Enter a Boolean SOP expression</option></select>
+<div id="typeBox"><label for="circuitType">Circuit type</label><select id="circuitType"><option value="fulladder">Full Adder — SUM and CARRY</option><option value="halfadder">Half Adder — SUM and CARRY</option><option value="and">AND gate</option><option value="or">OR gate</option><option value="xor">XOR gate</option><option value="nand">NAND gate</option><option value="nor">NOR gate</option><option value="not">NOT gate</option></select></div>
+<div id="sopBox" hidden><label for="sop">SOP expression</label><textarea id="sop" placeholder="Example: A'B + AC + BC&#10;Use + for OR, adjacency or * for AND, and ' for NOT."></textarea><div class="hint">Examples: A'B + AB' (XOR); AB + AC + BC. Use variable names A–D. Parentheses are supported.</div><label for="vars">Input variables</label><input id="vars" type="text" value="A,B,C" placeholder="A,B,C"></div>
+<div class="status">This defines the target function. The verifier generates its expected output for every input combination.</div>
+<h2 style="margin-top:20px">2. Choose what you want to verify</h2>
+<div class="choice">
+<label><input type="radio" name="method" value="table" checked> Truth table</label>
+<label><input type="radio" name="method" value="image"> Circuit screenshot</label>
+</div>
+<div id="tableInstructions" class="status">The tool will generate every input combination. Enter the output(s) from your circuit, then compare them with the target function.</div>
+<div id="imagePanel" hidden>
+<label for="imageFile">Upload circuit screenshot</label><input id="imageFile" type="file" accept="image/*">
+<img id="preview" class="preview" alt="Uploaded circuit screenshot">
+<div id="imageStatus" class="status warn">Screenshot mode needs a vision-capable AI service to automatically read gates and wires. This offline demo can preview the screenshot, but cannot reliably reconstruct a circuit from pixels by itself.</div>
+<label for="transcribed">Circuit expression read from the screenshot (optional manual fallback)</label><textarea id="transcribed" placeholder="If you can read the circuit, enter its output expression here, e.g. A'B + AB'. For multiple outputs, verify each output separately."></textarea>
+<div class="hint">The manual fallback lets the local tool compare an expression you transcribe. It is not automatic screenshot recognition.</div>
+</div>
+<div class="buttons"><button class="primary" id="build">Build expected truth table</button><button class="soft" id="reset">Reset</button></div>
+</section>
+<section class="right">
+<div class="card"><h2>3. Target logic reference</h2><div id="targetInfo" class="status">Select a target circuit and build the table.</div><h3>Logic structure preview</h3><div id="logicPreview" class="gateflow"></div><div id="targetEquation" class="eq">Expected Boolean equations will appear here.</div></div>
+<div class="card"><h2>4. Verification report</h2><div id="report" class="status">Build the table, enter observed output values, and verify.</div><div class="buttons"><button class="primary" id="verify">Verify against target</button><button class="green" id="fillTarget">Fill target values (demo)</button></div><div id="diagnosis" class="status">Mismatch diagnosis will appear here.</div></div>
+<div class="card wide" id="tableCard"><h2>5. Truth table</h2><p class="hint">Expected outputs are calculated from the target. Enter your circuit's observed output(s) in the “Actual” columns.</p><div class="tablewrap"><table id="truth"><thead></thead><tbody></tbody></table></div></div>
+<div class="card wide"><h2>6. What the result means</h2><div id="resultNotes" class="status">A PASS means the entered outputs match the target for all combinations. A mismatch points to one or more combinations that need circuit inspection.</div></div>
+</section></main>
+<footer>Educational prototype • SOP parsing and truth-table verification run locally • Automatic screenshot interpretation requires a vision AI integration</footer>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+let built={vars:[],outs:[],rows:[],functions:[],labels:[],kind:''};
+function selectedMethod(){return document.querySelector('input[name="method"]:checked').value}
+function typeConfig(){
+ const t=$('circuitType').value;
+ const map={
+ fulladder:{vars:['A','B','Cin'],outs:['SUM','CARRY'],labels:['SUM = A ⊕ B ⊕ Cin','CARRY = AB + ACin + BCin'],f:[v=>(v.A+v.B+v.Cin)%2,v=>+(v.A+v.B+v.Cin>=2)]},
+ halfadder:{vars:['A','B'],outs:['SUM','CARRY'],labels:['SUM = A ⊕ B','CARRY = AB'],f:[v=>v.A^v.B,v=>v.A&v.B]},
+ and:{vars:['A','B'],outs:['Y'],labels:['Y = AB'],f:[v=>v.A&v.B]},
+ or:{vars:['A','B'],outs:['Y'],labels:['Y = A + B'],f:[v=>v.A|v.B]},
+ xor:{vars:['A','B'],outs:['Y'],labels:['Y = A ⊕ B'],f:[v=>v.A^v.B]},
+ nand:{vars:['A','B'],outs:['Y'],labels:["Y = (AB)'"],f:[v=>1-(v.A&v.B)]},
+ nor:{vars:['A','B'],outs:['Y'],labels:["Y = (A+B)'"],f:[v=>1-(v.A|v.B)]},
+ not:{vars:['A'],outs:['Y'],labels:["Y = A'"],f:[v=>1-v.A]}
+ };return map[t];
+}
+function tokenize(s){let out=[],i=0;while(i<s.length){let ch=s[i];if(/\s/.test(ch)){i++;continue;}if(/[A-Za-z]/.test(ch)){let m=s.slice(i).match(/^[A-Za-z][A-Za-z0-9_]*/)[0];out.push({t:'var',v:m});i+=m.length;continue;}if(ch==="'"||ch==='+'||ch==='*'||ch==='('||ch===')'){out.push({t:ch,v:ch});i++;continue;}throw Error('Unsupported character: '+ch);}return out;}
+function parseSOP(s,vars){
+ // Parse conventional Boolean notation with implicit AND, + OR, apostrophe NOT; supports parentheses.
+ let toks=tokenize(s),pos=0;
+ function atom(){let node;if(!toks[pos])throw Error('Expression ends unexpectedly.');if(toks[pos].t==='('){pos++;node=orExpr();if(!toks[pos]||toks[pos].t!==')')throw Error('Missing closing parenthesis.');pos++;}else if(toks[pos].t==='var'){let name=toks[pos++].v;if(!vars.includes(name))throw Error('Variable '+name+' is not listed in input variables.');node={op:'var',name};}else throw Error('Expected a variable or parenthesis.');while(toks[pos]&&toks[pos].t==="'"){pos++;node={op:'not',x:node};}return node;}
+ function startsAtom(t){return t&&(t.t==='var'||t.t==='(');}
+ function andExpr(){let node=atom();while(toks[pos]&&(toks[pos].t==='*'||startsAtom(toks[pos]))){if(toks[pos].t==='*')pos++;node={op:'and',l:node,r:atom()};}return node;}
+ function orExpr(){let node=andExpr();while(toks[pos]&&toks[pos].t==='+'){pos++;node={op:'or',l:node,r:andExpr()};}return node;}
+ let tree=orExpr();if(pos<toks.length)throw Error('Unexpected token '+toks[pos].v+'.');return tree;
+}
+function evaluate(tree,v){switch(tree.op){case'var':return v[tree.name];case'not':return 1-evaluate(tree.x,v);case'and':return evaluate(tree.l,v)&evaluate(tree.r,v);case'or':return evaluate(tree.l,v)|evaluate(tree.r,v);}}
+function build(){
+ try{
+ let conf;
+ if($('specMode').value==='type')conf=typeConfig();
+ else {let vars=$('vars').value.split(',').map(x=>x.trim()).filter(Boolean);if(vars.length<1||vars.length>4)throw Error('Enter 1–4 input variables, separated by commas.');if(new Set(vars).size!==vars.length||vars.some(v=>!/^[A-Za-z][A-Za-z0-9_]*$/.test(v)))throw Error('Variable names must be unique identifiers, such as A,B,C.');let tree=parseSOP($('sop').value,vars);conf={vars,outs:['Y'],labels:['Y = '+$('sop').value.trim()],f:[v=>evaluate(tree,v)]};}
+ let rows=[];for(let n=0;n<2**conf.vars.length;n++){let vals={};conf.vars.forEach((name,i)=>vals[name]=(n>>(conf.vars.length-1-i))&1);rows.push({vals,expected:conf.f.map(fn=>+!!fn(vals))});}
+ built={vars:conf.vars,outs:conf.outs,rows,labels:conf.labels,kind:$('specMode').value==='type'?$('circuitType').value:'sop'};
+ drawTable();drawTarget();$('report').textContent='Target built successfully: '+rows.length+' input combinations, '+conf.outs.length+' output(s). Enter actual outputs or upload a screenshot for review.';$('report').className='status ok';$('diagnosis').textContent='Waiting for circuit output values.';$('diagnosis').className='status';
+ if(selectedMethod()==='image')$('imageStatus').textContent='Screenshot preview is available. Automatic gate/wire extraction requires connecting a vision-capable AI model. You can use the optional expression field as a manual fallback.';
+ }catch(e){$('report').textContent='Could not build target: '+e.message;$('report').className='status bad';}
+}
+function drawTable(){
+ let head='<tr>'+built.vars.map(x=>'<th>'+esc(x)+'</th>').join('')+built.outs.map(x=>'<th>Expected '+esc(x)+'</th>').join('')+built.outs.map((x,j)=>'<th>Actual '+esc(x)+'</th>').join('')+'</tr>';$('truth').querySelector('thead').innerHTML=head;
+ $('truth').querySelector('tbody').innerHTML=built.rows.map((r,i)=>'<tr data-i="'+i+'">'+built.vars.map(v=>'<td>'+r.vals[v]+'</td>').join('')+r.expected.map(x=>'<td>'+x+'</td>').join('')+built.outs.map((x,j)=>'<td><input type="text" maxlength="1" inputmode="numeric" data-out="'+j+'" placeholder="0/1" aria-label="Actual '+esc(x)+' row '+i+'"></td>').join('')+'</tr>').join('');
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function drawTarget(){
+ $('targetInfo').innerHTML='<span class="pill">'+built.rows.length+' combinations</span> <span class="pill">'+built.outs.length+' output(s)</span><p>Inputs: '+built.vars.map(esc).join(', ')+'</p>';
+ $('targetEquation').textContent=built.labels.join('\n');
+ let gates=built.kind==='fulladder'?['XOR','XOR','AND','AND','OR']:built.kind==='halfadder'?['XOR','AND']:built.kind==='sop'?['NOT / AND / OR']: [built.kind.toUpperCase()];
+ $('logicPreview').innerHTML=gates.map((g,i)=>(i?'<span class="wire"></span>':'')+'<span class="gate">'+esc(g)+'</span>').join('');
+}
+function verify(){
+ if(!built.rows.length){$('report').textContent='Build a target first.';return;}
+ let total=0,matched=0,missing=0,errors=[];
+ [...$('truth').querySelectorAll('tbody tr')].forEach((tr,i)=>{let bad=false;let ins=[...tr.querySelectorAll('input')];ins.forEach((inp,j)=>{let value=inp.value.trim();if(value!=='0'&&value!=='1'){missing++;return;}total++;if(+value!==built.rows[i].expected[j]){bad=true;errors.push({i,j,got:value,want:built.rows[i].expected[j],vals:built.rows[i].vals});}else matched++;});tr.style.background=bad?'#fff0f0':'';});
+ let all=missing===0&&errors.length===0;
+ $('report').textContent='Compared '+total+' output cells. Mismatches: '+errors.length+'. Blank or invalid cells: '+missing+'.';
+ $('report').className='status '+(errors.length?'bad':all?'ok':'warn');
+ if(all){$('diagnosis').textContent='PASS: every entered output matches the target function for all input combinations.';$('diagnosis').className='status ok';}
+ else if(errors.length){$('diagnosis').textContent='Mismatch detected. Examples: '+errors.slice(0,6).map(e=>'inputs '+built.vars.map(v=>v+'='+e.vals[v]).join(', ')+' → '+built.outs[e.j]+' expected '+e.want+', actual '+e.got).join('; ')+'. Inspect gate types, inversions, and wiring.';$('diagnosis').className='status bad';}
+ else{$('diagnosis').textContent='Incomplete: enter 0 or 1 in every actual-output cell before verification.';$('diagnosis').className='status warn';}
+ $('resultNotes').textContent='Input combinations: '+built.rows.length+'. Compared cells: '+total+'. Correct cells: '+matched+'. Mismatches: '+errors.length+'. Missing/invalid: '+missing+'. Final status: '+(all?'PASS':errors.length?'ERROR — OUTPUT MISMATCH':'INCOMPLETE')+'.';
+}
+$('specMode').addEventListener('change',()=>{let sop=$('specMode').value==='sop';$('sopBox').hidden=!sop;$('typeBox').hidden=sop;});
+document.querySelectorAll('input[name="method"]').forEach(r=>r.addEventListener('change',()=>{let img=selectedMethod()==='image';$('imagePanel').hidden=!img;$('tableInstructions').hidden=img;$('tableCard').hidden=img?true:false;}));
+$('imageFile').addEventListener('change',e=>{let f=e.target.files&&e.target.files[0];if(!f)return;if(!f.type.startsWith('image/'))return;let url=URL.createObjectURL(f);$('preview').src=url;$('preview').style.display='block';$('imageStatus').textContent='Image loaded: '+f.name+'. This standalone prototype can display it, but needs a vision AI backend to identify individual gates and wires automatically.';});
+$('build').addEventListener('click',build);$('verify').addEventListener('click',verify);
+$('fillTarget').addEventListener('click',()=>{[...$('truth').querySelectorAll('tbody tr')].forEach((tr,i)=>[...tr.querySelectorAll('input')].forEach((inp,j)=>inp.value=built.rows[i].expected[j]));$('report').textContent='Filled actual cells with expected values as a test example. Replace them with your circuit’s observed outputs for a real verification.';$('report').className='status warn';});
+$('reset').addEventListener('click',()=>{location.reload();});
+$('circuitType').addEventListener('change',()=>{});build();
+})();
+</script></body></html>
