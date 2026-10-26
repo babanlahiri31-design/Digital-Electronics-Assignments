@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-Assisted Boolean Expression Simplifier</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#172033;--muted:#617089;--line:#dce4ef;--blue:#2457d6;--blue2:#eaf0ff;--green:#137547;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--ink)}
+header{background:linear-gradient(120deg,#142c65,#2457d6);color:#fff;padding:28px 20px}
+.wrap{max-width:1120px;margin:auto}h1{margin:0 0 6px;font-size:clamp(24px,4vw,34px)}header p{margin:0;color:#e1e9ff}
+main{max-width:1120px;margin:22px auto;padding:0 16px 36px;display:grid;grid-template-columns:340px 1fr;gap:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:0 5px 18px #18345b0a}
+h2{font-size:18px;margin:0 0 14px}label{display:block;font-weight:650;margin:13px 0 6px}
+select,input,textarea,button{font:inherit}select,input,textarea{width:100%;padding:10px 11px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:var(--ink)}
+textarea{min-height:84px;resize:vertical}small,.hint{color:var(--muted);font-size:12px}
+button{border:0;border-radius:10px;padding:11px 14px;cursor:pointer;font-weight:700}
+.primary{background:var(--blue);color:white;width:100%;margin-top:16px}.secondary{background:var(--blue2);color:#1d46ae}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.results{display:grid;gap:16px}
+.output{padding:14px;border-radius:10px;background:#f8faff;border:1px solid var(--line);overflow-wrap:anywhere}
+.formula{font:600 17px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace}
+.badge{display:inline-block;background:#e5f7ed;color:#12643d;border-radius:99px;padding:4px 9px;font-size:12px;font-weight:700}
+.tablewrap{overflow:auto;max-height:390px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:7px 9px;border-bottom:1px solid #e7edf5;text-align:center;white-space:nowrap}th{background:#f1f5fb;position:sticky;top:0}tr:last-child td{border-bottom:0}
+.pill{display:inline-block;border:1px solid var(--line);padding:4px 8px;border-radius:8px;margin:3px;background:#fff;font:12px ui-monospace,monospace}
+.circuit{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.term{border:1px solid #b9c9ed;border-radius:10px;background:#f6f8ff;padding:10px 12px;font-family:ui-monospace,monospace}.or{font-weight:800;color:var(--blue);font-size:18px}
+.note{border-left:4px solid #f0b429;background:#fff9e8;padding:10px 12px;border-radius:6px;color:#654d0b;font-size:13px}
+footer{text-align:center;color:var(--muted);padding:0 16px 24px;font-size:12px}
+@media(max-width:800px){main{grid-template-columns:1fr}.row{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>AI-Assisted Boolean Expression Simplifier</h1><p>Build a truth table, simplify a 4–6 variable Boolean function, and inspect the resulting logic structure.</p></div></header>
+<main>
+<section class="card">
+<h2>1. Define your function</h2>
+<label for="vars">Number of variables</label>
+<select id="vars"><option value="4">4 variables (A–D)</option><option value="5">5 variables (A–E)</option><option value="6">6 variables (A–F)</option></select>
+<label for="minterms">Minterms where output = 1</label>
+<textarea id="minterms" placeholder="Example: 0, 1, 2, 5, 8, 9, 10"></textarea>
+<div class="hint">Enter decimal minterm numbers separated by commas or spaces. Valid range changes with variable count.</div>
+<label for="dontcares">Don't-care terms (optional)</label>
+<input id="dontcares" placeholder="Example: 3, 7, 11">
+<div class="row">
+<div><label for="form">Target form</label><select id="form"><option value="SOP">SOP (Sum of Products)</option><option value="POS">POS (Product of Sums)</option></select></div>
+<div><label for="method">Method</label><select id="method"><option value="qm">Quine–McCluskey</option><option value="truth">Truth table + minimization</option></select></div>
+</div>
+<button class="primary" id="run">Simplify & simulate</button>
+<button class="secondary" id="demo" style="width:100%;margin-top:9px">Load example</button>
+<p class="hint">This standalone educational simulator runs locally in your browser; no sign-in or internet connection needed.</p>
+</section>
+<section class="results">
+<div class="card">
+<h2>2. Simplified expression <span class="badge" id="status">Ready</span></h2>
+<div class="output"><div class="hint">Minimal expression (generated from the entered truth function)</div><div id="expression" class="formula">Enter minterms, then select “Simplify & simulate”.</div></div>
+<div id="stats" class="hint" style="margin-top:10px"></div>
+<div style="margin-top:13px"><strong>Product terms / sum terms</strong><div id="terms"></div></div>
+</div>
+<div class="card">
+<h2>3. Logic circuit structure</h2>
+<p class="hint">Box-style logic circuit: each AND/OR operation is shown in a labelled box, with entering input lines and leaving output lines.</p>
+<div id="circuit" class="circuit"><span class="hint">The circuit structure will appear here after simplification.</span></div>
+<div class="note" style="margin-top:14px">Each operation is represented by a labelled box rather than a traditional gate symbol. Input lines and output connections are shown explicitly.</div>
+</div>
+<div class="card">
+<h2>4. Truth table verification</h2>
+<div id="verify" class="hint">Run the simulator to generate all input combinations and compare the original function with the simplified expression.</div>
+<div class="tablewrap" id="tablebox" style="margin-top:12px;display:none"><table id="truth"></table></div>
+</div>
+<div class="card">
+<h2>5. Simplification notes</h2><div id="steps" class="hint">The simulator will list the implicants used and verify every row of the truth table.</div>
+</div>
+</section>
+</main>
+<footer>Boolean simplifier • Educational prototype • SOP/POS • 4–6 variables</footer>
+<script>
+const names=['A','B','C','D','E','F'];
+const $=id=>document.getElementById(id);
+function parseSet(s,max,label){if(!s.trim())return new Set();let out=new Set();for(const token of s.split(/[,\s;]+/).filter(Boolean)){if(!/^\d+$/.test(token))throw Error(label+': “'+token+'” is not a whole number.');let n=Number(token);if(n<0||n>=max)throw Error(label+': '+n+' is outside 0–'+(max-1)+'.');out.add(n)}return out}
+function bits(n,w){return n.toString(2).padStart(w,'0')}
+function ones(s){return [...s].filter(x=>x==='1').length}
+function combine(a,b){let diff=0,pos=-1;for(let i=0;i<a.length;i++){if(a[i]!==b[i]){if(a[i]==='-'||b[i]==='-')return null;diff++;pos=i}}if(diff!==1)return null;return a.slice(0,pos)+'-'+a.slice(pos+1)}
+function covers(pattern,n){const b=bits(n,pattern.length);return pattern.split('').every((c,i)=>c==='-'||c===b[i])}
+function qm(mins,dcs,w){
+ let terms=[...new Set([...mins,...dcs])].map(n=>({p:bits(n,w),cover:new Set([n])})),primes=[];
+ while(terms.length){
+  let used=new Set(),next=new Map();
+  for(let i=0;i<terms.length;i++)for(let j=i+1;j<terms.length;j++){
+   const p=combine(terms[i].p,terms[j].p);if(p!==null){used.add(i);used.add(j);let key=p;if(!next.has(key))next.set(key,{p,cover:new Set()});for(const n of [...terms[i].cover,...terms[j].cover])next.get(key).cover.add(n)}
+  }
+  terms.forEach((t,i)=>{if(!used.has(i))primes.push(t.p)});
+  terms=[...next.values()];
+ }
+ primes=[...new Set(primes)].filter(p=>[...mins].some(n=>covers(p,n)));
+ // Exact minimum cover: enumerate subsets of prime implicants (at most 6 variables, usually modest).
+ const coverSets=primes.map(p=>new Set([...mins].filter(n=>covers(p,n))));
+ let best=null,bestCost=Infinity;
+ function cost(sel){return sel.reduce((s,i)=>s+primes[i].replace(/-/g,'').length,0)}
+ function search(start,sel,covered){
+  if([...mins].every(n=>covered.has(n))){let c=sel.length*100+cost(sel);if(c<bestCost){bestCost=c;best=sel.slice()}return}
+  if(sel.length>=primes.length||sel.length*100>=bestCost)return;
+  for(let i=start;i<primes.length;i++){let nc=new Set(covered);coverSets[i].forEach(n=>nc.add(n));if(nc.size===covered.size)continue;search(i+1,[...sel,i],nc)}
+ }
+ search(0,[],new Set());
+ if(best===null)best=primes.map((_,i)=>i);
+ return (best||[]).map(i=>primes[i]);
+}
+function termSOP(p){let a=[];p.split('').forEach((b,i)=>{if(b!=='-')a.push(b==='1'?names[i]:names[i]+"'")});return a.length?a.join(''): '1'}
+function termPOS(p){let a=[];p.split('').forEach((b,i)=>{if(b!=='-')a.push(b==='0'?names[i]:names[i]+"'")});return a.length?'('+a.join(' + ')+')':'0'}
+function evalPattern(p,n){return covers(p,n)}
+function exprEval(patterns,n,form){if(form==='SOP')return patterns.some(p=>evalPattern(p,n));return patterns.every(p=>!evalPattern(p,n))}
+
+function drawGateCircuit(patterns, w, form){
+ const host=$('circuit');
+ const W=900, boxX=350, boxW=110, finalX=650, finalW=110;
+ if(!patterns.length){
+  host.innerHTML=`<svg viewBox="0 0 780 110" role="img" aria-label="Constant output" style="width:100%;min-width:560px;height:auto;font-family:Arial,sans-serif">
+   <text x="20" y="30" font-size="15" fill="#172033" font-weight="bold">Constant function</text>
+   <path d="M30 60 H180" stroke="#2457d6" stroke-width="2"/><circle cx="184" cy="60" r="4" fill="#137547"/>
+   <text x="205" y="65" font-size="14" fill="#137547">Y = ${form==='SOP'?'0 (LOW)':'1 (HIGH)'}</text></svg>`;
+  return;
+ }
+ const rowGap=100, top=70, H=Math.max(190,top+(patterns.length-1)*rowGap+90);
+ const centers=patterns.map((_,i)=>top+i*rowGap);
+ const finalY=H/2;
+ const finalInputYs=patterns.map((_,i)=>finalY+(i-(patterns.length-1)/2)*Math.min(24,72/patterns.length));
+ let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Box-style logic circuit" style="width:100%;height:auto;min-width:720px;font-family:Arial,sans-serif">
+ <defs><style>
+ .wire{stroke:#2457d6;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+ .gate{stroke:#172033;stroke-width:2;fill:#f1f5ff}
+ .txt{font-size:13px;fill:#172033}.label{font-size:14px;font-weight:bold;fill:#172033}
+ .small{font-size:11px;fill:#52627a}.out{font-size:15px;font-weight:bold;fill:#137547}
+ </style></defs>
+ <text x="18" y="25" class="txt" font-weight="bold">${form==='SOP'?'SOP: AND blocks feeding an OR block':'POS: OR blocks feeding an AND block'}</text>`;
+ patterns.forEach((pat,i)=>{
+  const cy=centers[i], active=[];
+  pat.split('').forEach((bit,j)=>{if(bit!=='-')active.push({name:names[j],bit})});
+  const isAnd=form==='SOP', gateName=isAnd?'AND':'OR';
+  const spread=Math.min(20,56/Math.max(active.length,1));
+  if(active.length===0){
+   s+=`<text x="250" y="${cy+4}" class="txt">1</text><path class="wire" d="M265 ${cy} H${boxX}"/>`;
+  } else {
+   active.forEach((lit,k)=>{
+    const iy=cy+(k-(active.length-1)/2)*spread;
+    const invert=isAnd ? lit.bit==='0' : lit.bit==='1';
+    s+=`<text x="18" y="${iy+4}" class="txt">${lit.name}${invert?"'":''}</text>`;
+    s+=`<path class="wire" d="M45 ${iy} H${boxX}"/>`;
+   });
+  }
+  s+=`<rect class="gate" x="${boxX}" y="${cy-31}" width="${boxW}" height="62" rx="5"/>`;
+  s+=`<text x="${boxX+boxW/2}" y="${cy+5}" text-anchor="middle" class="label">${gateName}</text>`;
+  const fy=finalInputYs[i];
+  s+=`<path class="wire" d="M${boxX+boxW} ${cy} H535 V${fy} H${finalX}"/>`;
+  s+=`<text x="${boxX}" y="${cy+45}" class="small">${isAnd?'Product ':'Sum '}${i+1}</text>`;
+ });
+ const finalName=form==='SOP'?'OR':'AND';
+ s+=`<rect class="gate" x="${finalX}" y="${finalY-36}" width="${finalW}" height="72" rx="5"/>
+ <text x="${finalX+finalW/2}" y="${finalY+5}" text-anchor="middle" class="label">${finalName}</text>
+ <path class="wire" d="M${finalX+finalW} ${finalY} H805"/><circle cx="809" cy="${finalY}" r="4" fill="#137547"/><text x="820" y="${finalY+5}" class="out">Y</text>
+ </svg><div class="hint" style="flex-basis:100%">Simple box-style gate diagram: each variable enters a gate block through a line; each block's output line feeds the final gate, whose output is Y. A prime (') after a variable means its complemented input.</div>`;
+ host.innerHTML=s;
+}
+function render(){
+ try{
+  const w=Number($('vars').value),max=2**w,form=$('form').value;
+  const mins=parseSet($('minterms').value,max,'Minterms'),dcs=parseSet($('dontcares').value,max,"Don't-care terms");
+  if(!mins.size)throw Error('Enter at least one minterm where the output is 1.');
+  for(const n of mins)if(dcs.has(n))throw Error('Minterm '+n+' cannot also be a don’t-care term.');
+  const target=form==='SOP'?mins:new Set(Array.from({length:max},(_,i)=>i).filter(i=>!mins.has(i)&&!dcs.has(i)));
+  // Minimize the on-set for SOP, or the off-set for POS; then convert patterns into the chosen form.
+  const pats=qm(target,dcs,w);
+  const expr=form==='SOP'?(pats.length?pats.map(termSOP).join(' + '):'0'):(pats.length?pats.map(termPOS).join(''):'1');
+  $('expression').textContent=expr;$('status').textContent='Simplified';$('stats').textContent=`${w} variables • ${max} input combinations • ${pats.length} ${form==='SOP'?'product term(s)':'sum clause(s)'}`;
+  $('terms').innerHTML=pats.length?pats.map(p=>'<span class="pill">'+(form==='SOP'?termSOP(p):termPOS(p))+'</span>').join(''):'<span class="pill">'+(form==='SOP'?'0':'1')+'</span>';
+  // Draw a gate-level schematic using SVG symbols and wires.
+  drawGateCircuit(pats, w, form);
+  let html='<thead><tr>'+names.slice(0,w).map(n=>'<th>'+n+'</th>').join('')+'<th>Expected Y</th><th>Simplified Y</th><th>Status</th></tr></thead><tbody>',ok=0;
+  for(let n=0;n<max;n++){const expected=mins.has(n)?1:(dcs.has(n)?'X':0);let actual;
+   if(form==='SOP')actual=pats.some(p=>covers(p,n))?1:0;
+   else actual=pats.every(p=>!covers(p,n))?1:0;
+   const valid=expected==='X'||actual===expected;if(valid)ok++;
+   html+='<tr>'+bits(n,w).split('').map(b=>'<td>'+b+'</td>').join('')+`<td>${expected}</td><td>${actual}</td><td>${valid?'✓ Pass':'✗ Check'}</td></tr>`;
+  }
+  $('truth').innerHTML=html+'</tbody>';$('tablebox').style.display='block';
+  $('verify').innerHTML=`<span class="badge">${ok}/${max} rows verified</span> <span class="hint">Don't-care rows may take either output value.</span>`;
+  $('steps').innerHTML=`<p><b>Method:</b> Quine–McCluskey tabulation (systematic grouping and combining of minterms).</p><p><b>Implicants:</b> ${pats.length?pats.map(p=>p+' → '+(form==='SOP'?termSOP(p):termPOS(p))).join('<br>'):'Constant function'}.</p><p><b>Verification:</b> The simplified output was evaluated for every possible input combination. ${ok===max?'All rows match the specified function, excluding unconstrained choices for don’t-care rows.':'Some rows differ; check the entered minterms and expression.'}</p>`;
+ }catch(e){$('status').textContent='Input needed';$('expression').textContent=e.message;$('stats').textContent='';$('terms').innerHTML='';$('circuit').innerHTML='';$('tablebox').style.display='none';$('verify').textContent='Correct the input and run again.'}
+}
+$('run').addEventListener('click',render);
+$('demo').addEventListener('click',()=>{$('vars').value='4';$('minterms').value='0, 2, 5, 7, 8, 10, 13, 15';$('dontcares').value='';$('form').value='SOP';render()});
+</script>
+</body></html>
