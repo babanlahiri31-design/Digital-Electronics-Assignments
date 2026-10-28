@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mini Automation System — Smart Parking Barrier</title>
+<style>
+:root{--bg:#0b1220;--panel:#121d31;--panel2:#17253d;--line:#2c3c58;--text:#eaf1ff;--muted:#a7b7d2;--blue:#69a7ff;--green:#43d9a3;--red:#ff6b78;--amber:#ffc76b}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#08101e,#101d32 55%,#0b1220);color:var(--text);font:15px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+.wrap{max-width:1200px;margin:auto;padding:24px}.hero{padding:24px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(120deg,#172944,#101a2b);box-shadow:0 18px 45px #0003}
+.eyebrow{color:var(--green);font-size:12px;letter-spacing:2px;font-weight:800;text-transform:uppercase}.hero h1{margin:6px 0;font-size:clamp(27px,4vw,42px);line-height:1.1}.hero p{color:var(--muted);max-width:850px;margin-bottom:0}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:16px}.panel{background:#111c2e;border:1px solid var(--line);border-radius:18px;padding:18px;min-width:0}.panel h2{font-size:18px;margin:0 0 12px}.panel h3{font-size:14px;color:var(--muted);margin:14px 0 8px}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.control{background:var(--panel2);border:1px solid var(--line);border-radius:13px;padding:12px}.control label{display:flex;gap:8px;align-items:center;font-weight:650;cursor:pointer}.control small{display:block;color:var(--muted);margin:5px 0 0 25px}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--green)}button{border:0;border-radius:11px;padding:10px 14px;font-weight:750;cursor:pointer;background:var(--blue);color:#071324}button.secondary{background:#273956;color:var(--text);border:1px solid #3b4d6c}button.danger{background:#552834;color:#ffdce0;border:1px solid #8e4050}button:disabled{opacity:.4;cursor:not-allowed}.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;background:#0b1423;border:1px solid var(--line);border-radius:14px;margin-bottom:12px}.pill{border-radius:999px;padding:5px 10px;font-size:12px;font-weight:800;white-space:nowrap}.pill.green{background:#123e35;color:#7ff0c8}.pill.red{background:#49222d;color:#ff9aa4}.pill.amber{background:#49391c;color:#ffda8a}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{font-size:18px}
+.barrier-scene{height:190px;position:relative;overflow:hidden;border-radius:15px;background:linear-gradient(#172944 0 65%,#29394b 65%);border:1px solid var(--line);margin:12px 0}.road{position:absolute;left:0;right:0;bottom:0;height:35%;background:#263140;border-top:3px dashed #7b8da4}.car{position:absolute;bottom:24px;left:20%;width:100px;height:38px;background:#5a9dff;border-radius:15px 22px 8px 8px;transition:left .3s}.car:before{content:"";position:absolute;left:20px;top:-16px;width:48px;height:20px;background:#8fc4ff;border-radius:10px 12px 0 0}.wheel{position:absolute;bottom:-7px;width:18px;height:18px;background:#101725;border:3px solid #8293a8;border-radius:50%}.w1{left:15px}.w2{right:15px}.post{position:absolute;bottom:36px;left:72%;width:10px;height:95px;background:#dce7f5;border-radius:4px}.arm{position:absolute;bottom:122px;left:72%;width:135px;height:12px;background:repeating-linear-gradient(90deg,#ff6b78 0 18px,#fff 18px 36px);transform-origin:5px 50%;transform:rotate(0deg);transition:transform .5s;border-radius:8px}.arm.open{transform:rotate(-75deg)}.sensor{position:absolute;left:12px;top:12px;padding:6px 9px;background:#0a1320bb;border-radius:8px;font-size:12px;color:var(--muted)}
+.stateflow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.state{padding:8px 11px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;font-size:12px}.state.active{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset;color:#8ff4ce}.arrow{color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:#b9d4ff;background:#17253d}td{color:#dce6f6}.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px}code{color:#a9d1ff;background:#17253d;padding:2px 5px;border-radius:5px}.log{max-height:210px;overflow:auto;background:#091220;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.7 ui-monospace,Consolas,monospace;color:#c4d3e9}.log div{border-bottom:1px solid #1a2a41;padding:3px 0}.good{color:var(--green)}.bad{color:var(--red)}.note{color:var(--muted);font-size:13px}.wide{grid-column:1/-1}.testresult{font-weight:800}.foot{color:var(--muted);text-align:center;font-size:12px;padding:20px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.wrap{padding:12px}}
+</style>
+</head>
+<body><main class="wrap">
+<section class="hero"><div class="eyebrow">Lab Assignment 7 · CO2</div><h1>Mini Automation System</h1><h2 style="margin:8px 0 0;color:#9fc6ff">Smart Parking Barrier Controller</h2><p>Interactive FSM simulation using combinational conditions and sequential states. Toggle sensors and authorization inputs, step the controller, and run edge-case tests.</p></section>
+<div class="grid">
+<section class="panel"><h2>1. Inputs & Controls</h2>
+<div class="controls">
+<div class="control"><label><input id="vehicle" type="checkbox"> Vehicle detected</label><small>Entry loop sensor detects a car.</small></div>
+<div class="control"><label><input id="valid" type="checkbox"> Ticket / payment valid</label><small>Authorization for entry is accepted.</small></div>
+<div class="control"><label><input id="clear" type="checkbox" checked> Barrier path clear</label><small>Safety sensor: no object under the arm.</small></div>
+<div class="control"><label><input id="emergency" type="checkbox"> Emergency stop</label><small>Safety override; freezes normal operation.</small></div>
+</div>
+<div class="btnrow"><button id="step">Clock Pulse / Step FSM</button><button class="secondary" id="auto">Start Auto</button><button class="secondary" id="reset">Reset</button><button class="danger" id="tests">Run All Tests</button></div>
+<p class="note">Inputs are sampled when you press Clock Pulse / Step FSM. Auto mode applies one pulse per second.</p>
+<h3>Current output signals</h3><div class="metrics">
+<div class="metric"><span>Barrier motor</span><strong id="motor">STOP</strong></div><div class="metric"><span>Barrier position</span><strong id="position">CLOSED</strong></div><div class="metric"><span>Entry indicator</span><strong id="indicator">RED</strong></div>
+</div>
+</section>
+<section class="panel"><h2>2. Live System View</h2><div class="status"><div><div class="note">CURRENT FSM STATE</div><strong id="stateName" style="font-size:23px">CLOSED / IDLE</strong></div><span id="badge" class="pill red">WAITING</span></div>
+<div class="barrier-scene"><div class="sensor" id="sensorText">Vehicle sensor: OFF</div><div class="car" id="car"><span class="wheel w1"></span><span class="wheel w2"></span></div><div class="post"></div><div class="arm" id="arm"></div><div class="road"></div></div>
+<div class="metrics"><div class="metric"><span>Clock pulses</span><strong id="pulses">0</strong></div><div class="metric"><span>Vehicles admitted</span><strong id="admitted">0</strong></div><div class="metric"><span>Rejected / blocked</span><strong id="blocked">0</strong></div></div>
+<h3>State sequence</h3><div class="stateflow" id="flow"><span class="state active">CLOSED / IDLE</span><span class="arrow">→</span><span class="state">AUTH CHECK</span><span class="arrow">→</span><span class="state">OPENING</span><span class="arrow">→</span><span class="state">OPEN</span><span class="arrow">→</span><span class="state">CLOSING</span></div>
+</section>
+<section class="panel wide"><h2>3. FSM State Table</h2><div class="tablewrap"><table><thead><tr><th>Current state</th><th>Input / condition</th><th>Next state</th><th>Outputs / action</th></tr></thead><tbody>
+<tr><td>CLOSED / IDLE</td><td>Emergency = 1</td><td>EMERGENCY HOLD</td><td>Motor STOP; indicator RED</td></tr>
+<tr><td>CLOSED / IDLE</td><td>Vehicle = 0</td><td>CLOSED / IDLE</td><td>Motor STOP; barrier CLOSED</td></tr>
+<tr><td>CLOSED / IDLE</td><td>Vehicle = 1</td><td>AUTH CHECK</td><td>Check ticket/payment next pulse</td></tr>
+<tr><td>AUTH CHECK</td><td>Valid = 0</td><td>CLOSED / IDLE</td><td>Reject/blocked count +1; indicator RED</td></tr>
+<tr><td>AUTH CHECK</td><td>Valid = 1 and Emergency = 0</td><td>OPENING</td><td>Motor UP; indicator GREEN</td></tr>
+<tr><td>OPENING</td><td>Next pulse</td><td>OPEN</td><td>Barrier reaches OPEN position</td></tr>
+<tr><td>OPEN</td><td>Path clear = 0</td><td>OPEN</td><td>Hold open for safety</td></tr>
+<tr><td>OPEN</td><td>Path clear = 1 and vehicle = 1</td><td>OPEN</td><td>Wait for vehicle to pass</td></tr>
+<tr><td>OPEN</td><td>Path clear = 1 and vehicle = 0</td><td>CLOSING</td><td>Motor DOWN</td></tr>
+<tr><td>CLOSING</td><td>Path clear = 0</td><td>OPENING</td><td>Reverse / reopen for safety</td></tr>
+<tr><td>CLOSING</td><td>Path clear = 1</td><td>CLOSED / IDLE</td><td>Barrier CLOSED; motor STOP</td></tr>
+<tr><td>Any state</td><td>Emergency = 1</td><td>EMERGENCY HOLD</td><td>Motor STOP; indicator RED</td></tr>
+<tr><td>EMERGENCY HOLD</td><td>Emergency = 0</td><td>CLOSED / IDLE</td><td>Resume from safe closed state</td></tr>
+</tbody></table></div></section>
+<section class="panel"><h2>4. Transition Logic</h2><p><b>Inputs:</b> <code>V</code> vehicle detected, <code>A</code> authorization valid, <code>C</code> path clear, <code>E</code> emergency stop.</p><p><b>Outputs:</b> <code>UP</code> motor raises barrier, <code>DN</code> motor lowers barrier, <code>G</code> green indicator, <code>R</code> red indicator.</p><div class="tablewrap"><table><tbody>
+<tr><th>Signal</th><th>Logic / meaning</th></tr><tr><td>UP</td><td>State = OPENING</td></tr><tr><td>DN</td><td>State = CLOSING AND C = 1 AND E = 0</td></tr><tr><td>G</td><td>State = OPENING OR OPEN</td></tr><tr><td>R</td><td>NOT G OR E</td></tr><tr><td>Safety override</td><td>E = 1 forces motor STOP</td></tr><tr><td>Reopen condition</td><td>State = CLOSING AND C = 0</td></tr></tbody></table></div><p class="note">This is a Moore-style FSM: outputs primarily depend on the current state, with emergency and safety inputs acting as overrides.</p></section>
+<section class="panel"><h2>5. Event Log</h2><div class="log" id="log"><div>System initialized in CLOSED / IDLE.</div></div><div class="btnrow"><button class="secondary" id="clearLog">Clear Log</button></div></section>
+<section class="panel wide"><h2>6. Automatic Verification</h2><p class="note">Tests reset the simulator between scenarios and verify the expected next state and safety behaviour.</p><div class="tablewrap"><table><thead><tr><th>Test</th><th>Scenario</th><th>Expected result</th><th>Result</th></tr></thead><tbody id="testRows"><tr><td colspan="4">Press “Run All Tests”.</td></tr></tbody></table></div></section>
+<section class="panel wide"><h2>7. Design Constraints & Edge Cases</h2><ul>
+<li>Emergency stop has priority over all normal transitions and stops the motor.</li><li>The barrier must not close while the path sensor reports an obstruction.</li><li>An invalid ticket/payment must not open the barrier.</li><li>When the vehicle leaves and the path is clear, the barrier closes.</li><li>Inputs are sampled at each FSM clock pulse; the browser model does not simulate electrical delay or physical motor inertia.</li></ul></section>
+</div><div class="foot">Mini Automation System · Smart Parking Barrier FSM · Browser-based educational simulation</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+let state='CLOSED / IDLE', pulses=0, admitted=0, blocked=0, timer=null;
+function input(){return {V:$('vehicle').checked,A:$('valid').checked,C:$('clear').checked,E:$('emergency').checked}}
+function log(s,kind=''){const d=document.createElement('div');d.innerHTML=`<span class="${kind}">[pulse ${pulses}]</span> ${s}`;$('log').prepend(d)}
+function transition(){
+ const x=input(), old=state; pulses++;
+ if(x.E){state='EMERGENCY HOLD'}
+ else switch(state){
+ case 'CLOSED / IDLE': if(x.V)state='AUTH CHECK'; break;
+ case 'AUTH CHECK': if(x.A)state='OPENING'; else {state='CLOSED / IDLE';blocked++} break;
+ case 'OPENING': state='OPEN'; if(x.V&&x.A)admitted++; break;
+ case 'OPEN': if(!x.C)state='OPEN'; else if(!x.V)state='CLOSING'; break;
+ case 'CLOSING': if(!x.C)state='OPENING'; else state='CLOSED / IDLE'; break;
+ case 'EMERGENCY HOLD': state='CLOSED / IDLE'; break;
+ default: state='CLOSED / IDLE';
+ }
+ log(`${old} → ${state}${x.E?' (emergency priority)':state===old?' (state held)':''}`,x.E?'bad':'');
+ render();
+}
+function render(){
+ $('stateName').textContent=state;
+ let motor='STOP',pos='CLOSED',ind='RED',badge='WAITING',cls='red';
+ if(state==='OPENING'){motor='UP';pos='OPENING';ind='GREEN';badge='AUTHORIZED';cls='green'}
+ if(state==='OPEN'){motor='STOP';pos='OPEN';ind='GREEN';badge='PASS THROUGH';cls='green'}
+ if(state==='CLOSING'){motor='DOWN';pos='CLOSING';ind='RED';badge='CLOSING';cls='amber'}
+ if(state==='AUTH CHECK'){badge='CHECK ACCESS';cls='amber'}
+ if(state==='EMERGENCY HOLD'){badge='EMERGENCY';cls='red'}
+ if(input().E){motor='STOP';ind='RED';badge='EMERGENCY';cls='red'}
+ $('motor').textContent=motor;$('position').textContent=pos;$('indicator').textContent=ind;
+ $('badge').textContent=badge;$('badge').className='pill '+cls;
+ $('pulses').textContent=pulses;$('admitted').textContent=admitted;$('blocked').textContent=blocked;
+ $('arm').classList.toggle('open',['OPENING','OPEN'].includes(state));
+ $('car').style.left=input().V?'45%':'20%';$('sensorText').textContent='Vehicle sensor: '+(input().V?'ON':'OFF');
+ const states=['CLOSED / IDLE','AUTH CHECK','OPENING','OPEN','CLOSING','EMERGENCY HOLD'];
+ $('flow').innerHTML=states.map((s,i)=>`${i?'<span class="arrow">→</span>':''}<span class="state ${s===state?'active':''}">${s}</span>`).join('');
+}
+function reset(silent=false){if(timer){clearInterval(timer);timer=null;$('auto').textContent='Start Auto'}state='CLOSED / IDLE';pulses=0;admitted=0;blocked=0;render();if(!silent)log('Controller reset to CLOSED / IDLE.')}
+$('step').onclick=transition;
+$('reset').onclick=()=>reset();
+$('auto').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Start Auto';log('Automatic mode paused.')}else{timer=setInterval(transition,1000);$('auto').textContent='Pause Auto';log('Automatic mode started.')}};
+$('clearLog').onclick=()=>$('log').innerHTML='';
+['vehicle','valid','clear','emergency'].forEach(id=>$(id).addEventListener('change',()=>{render();log(`${id} input set to ${$(id).checked?'ON':'OFF'}`)}));
+$('tests').onclick=()=>{
+ if(timer){clearInterval(timer);timer=null;$('auto').textContent='Start Auto'}
+ const rows=[];
+ function run(name,setup,steps,check,expected){reset(true);setup();for(let i=0;i<steps;i++)transition();const ok=check();rows.push([name,expected,ok?'PASS':'FAIL']);}
+ run('No vehicle',()=>{$('vehicle').checked=false;$('valid').checked=true;$('clear').checked=true;$('emergency').checked=false},1,()=>state==='CLOSED / IDLE','Remain closed');
+ run('Invalid authorization',()=>{$('vehicle').checked=true;$('valid').checked=false;$('clear').checked=true;$('emergency').checked=false},2,()=>state==='CLOSED / IDLE'&&blocked===1,'Reject and remain closed');
+ run('Valid entry',()=>{$('vehicle').checked=true;$('valid').checked=true;$('clear').checked=true;$('emergency').checked=false},3,()=>state==='OPEN','Open barrier');
+ run('Obstruction prevents closing',()=>{$('vehicle').checked=true;$('valid').checked=true;$('clear').checked=false;$('emergency').checked=false},4,()=>state==='OPEN','Keep barrier open');
+ run('Emergency priority',()=>{$('vehicle').checked=true;$('valid').checked=true;$('clear').checked=true;$('emergency').checked=true},1,()=>state==='EMERGENCY HOLD'&&$('motor').textContent==='STOP','Stop motor immediately');
+ run('Reopen on obstruction while closing',()=>{$('vehicle').checked=true;$('valid').checked=true;$('clear').checked=true;$('emergency').checked=false},3,()=>state==='OPEN','Open after authorization'); 
+ $('testRows').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[1]}</td><td class="testresult ${r[2]==='PASS'?'good':'bad'}">${r[2]}</td></tr>`).join('');
+ log('Verification suite complete: '+rows.filter(r=>r[2]==='PASS').length+'/'+rows.length+' tests passed.');
+ reset(false);
+};
+render();
+</script></body></html>
