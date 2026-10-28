@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI-Assisted Code-to-Gate Explainer</title>
+<style>
+:root{--navy:#17365d;--blue:#2764a5;--bg:#f3f6fb;--border:#d7e0ec;--green:#177245;--amber:#8a5b00}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:#172338}
+header{padding:24px 20px;background:linear-gradient(120deg,#17365d,#2874b5);color:#fff}
+header h1{margin:0 0 7px;font-size:clamp(22px,3vw,32px)}header p{margin:0;opacity:.92}
+main{max-width:1150px;margin:22px auto;padding:0 16px 35px;display:grid;grid-template-columns:1fr 1fr;gap:17px}
+.card{background:white;border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 5px 18px #19385c0b}.wide{grid-column:1/-1}
+h2{margin:0 0 12px;color:var(--navy);font-size:20px}label{font-weight:600;font-size:14px}
+select,button,input,textarea{font:inherit;border:1px solid #b8c7da;border-radius:8px;padding:10px;background:#fff;color:#172338}
+textarea{width:100%;min-height:125px;resize:vertical;font-family:Consolas,monospace;font-size:13px}
+button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.muted{color:#61728a;font-size:13px;line-height:1.5}.pill{display:inline-block;background:#eaf1fa;color:var(--navy);border-radius:20px;padding:5px 9px;font-size:12px;font-weight:bold}
+.blockrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0}.block{min-width:85px;text-align:center;padding:12px 10px;border:2px solid #52749a;background:#edf4fc;border-radius:8px;font-weight:bold}.wire{height:3px;width:24px;background:#7189a6}.block.green{background:#e0f6e9;border-color:#4b9a6d}.block.amber{background:#fff2d4;border-color:#bf9743}
+.output{padding:12px;background:#f2f7fd;border-radius:9px;margin-top:10px;line-height:1.55}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}th,td{padding:8px;border:1px solid var(--border);text-align:center}th{background:#eaf1fa;color:var(--navy)}tbody tr:nth-child(even){background:#f8fafd}
+.good{color:var(--green);font-weight:bold}.warn{color:var(--amber);font-weight:bold}.code{font-family:Consolas,monospace;background:#f4f6fa;padding:2px 5px;border-radius:4px}
+@media(max-width:760px){main{grid-template-columns:1fr}.wide{grid-column:auto}}
+</style></head><body>
+<header><h1>AI-Assisted Code-to-Gate Explainer</h1><p>Map small code snippets to digital logic blocks, explore the circuit structure, and verify the logic with a truth table.</p></header>
+<main>
+<section class="card"><h2>1. Choose an example</h2>
+<div class="row"><label for="example">Example</label><select id="example"><option value="if">if (a > b) c = a; else c = b;</option><option value="loop">for (i = 0; i &lt; 8; i++)</option><option value="sum">c = a + b;</option><option value="custom">Custom pseudocode (explanation only)</option></select><button class="primary" id="load">Load example</button></div>
+<label for="code">Code / pseudocode</label><textarea id="code">if (a > b) c = a; else c = b;</textarea>
+<div class="row"><button class="primary" id="explain">Explain hardware mapping</button><button id="clear">Clear</button></div>
+<p class="muted">This educational tool uses rule-based examples to explain common mappings. It does not send code to an external AI service and does not execute arbitrary source code.</p>
+</section>
+<section class="card"><h2>2. Hardware interpretation</h2><div id="mapping"><span class="pill">IF–ELSE</span><p>Comparator + 2:1 multiplexer (MUX).</p><div class="blockrow"><div class="block">A, B</div><div class="wire"></div><div class="block amber">Comparator<br>A &gt; B?</div><div class="wire"></div><div class="block green">MUX</div><div class="wire"></div><div class="block">c</div></div><p>The comparator generates select signal S. If S=1, the MUX passes A; otherwise it passes B.</p></div></section>
+<section class="card wide"><h2>3. Verify the if–else circuit</h2>
+<p>Use 1-bit values for A and B to exhaustively test the comparator condition A &gt; B. The selected output is C = A when A &gt; B, otherwise C = B. (For general multi-bit values, the same comparator/MUX structure applies.)</p>
+<div class="row"><label for="a">A</label><select id="a"><option>0</option><option>1</option></select><label for="b">B</label><select id="b"><option>0</option><option>1</option></select><button class="primary" id="test">Test inputs</button></div>
+<div class="output" id="single">A=0, B=0 → S=0 → C=0</div>
+<table><thead><tr><th>A</th><th>B</th><th>S = (A &gt; B)</th><th>MUX output C</th><th>Expected code output</th><th>Status</th></tr></thead><tbody id="truth"></tbody></table>
+<div class="output"><strong>Boolean equations for the 1-bit demonstration:</strong><br>S = A · B′<br>C = S·A + S′·B<br>Since S=1 only when A=1 and B=0, this simplifies to C = A + B for 1-bit inputs. For multi-bit operands, use a magnitude comparator and a bus-width MUX.</div>
+</section>
+<section class="card"><h2>4. Counting loop mapping</h2>
+<p><span class="code">for (i = 0; i &lt; 8; i++)</span></p>
+<div class="blockrow"><div class="block">Counter<br>i[3:0]</div><div class="wire"></div><div class="block amber">Comparator<br>i &lt; 8?</div><div class="wire"></div><div class="block green">Enable / Stop</div></div>
+<p>A register stores i, an incrementer computes i+1, a comparator checks i&lt;8, and control logic continues or stops the loop. A counter alone does not implement the full loop condition.</p>
+<table><thead><tr><th>Iteration</th><th>i (decimal)</th><th>i (4-bit)</th><th>i &lt; 8?</th><th>Action</th></tr></thead><tbody id="loopTable"></tbody></table>
+</section>
+<section class="card"><h2>5. Arithmetic statement mapping</h2>
+<p><span class="code">c = a + b;</span></p>
+<div class="blockrow"><div class="block">Register A</div><div class="wire"></div><div class="block green">Adder</div><div class="wire"></div><div class="block">Register C</div></div>
+<p>Registers hold operands and result. The adder is combinational; a clock edge can store its output in the result register.</p>
+<div class="row"><label for="aa">A (0–15)</label><input id="aa" type="number" min="0" max="15" value="5" style="width:85px"><label for="bb">B (0–15)</label><input id="bb" type="number" min="0" max="15" value="3" style="width:85px"><button class="primary" id="add">Add</button></div>
+<div class="output" id="sum">5 + 3 = 8; 4-bit result 1000; carry 0.</div>
+</section>
+<section class="card wide"><h2>6. Verification notes</h2><ul>
+<li>For IF–ELSE, test all four combinations of 1-bit A and B in the truth table.</li>
+<li>For the loop, verify the counter values 0 through 7 satisfy i&lt;8 and that the condition becomes false at i=8.</li>
+<li>For addition, verify result = (A+B) mod 16 and carry = 1 when A+B ≥ 16.</li>
+<li>When using Logisim/CircuitVerse, compare the simulated outputs against the expected tables and correct any wiring or select-polarity mistakes.</li>
+</ul><p class="muted">The truth table is exhaustive for the 1-bit IF–ELSE demonstration. The multi-bit comparator/MUX and loop mapping are structural examples and should be implemented and tested in a logic simulator for the selected bit width.</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const examples={
+if:{code:'if (a > b) c = a; else c = b;',type:'if'},
+loop:{code:'for (i = 0; i < 8; i++) { /* loop body */ }',type:'loop'},
+sum:{code:'c = a + b;',type:'sum'},
+custom:{code:'/* Enter your pseudocode here */',type:'custom'}
+};
+function loadExample(){let e=examples[$('example').value];$('code').value=e.code;renderMapping(e.type)}
+function renderMapping(type){
+let m=$('mapping');
+if(type==='if'){m.innerHTML='<span class="pill">IF–ELSE</span><p><strong>Comparator + 2:1 MUX + output register (optional)</strong></p><div class="blockrow"><div class="block">A, B</div><div class="wire"></div><div class="block amber">Comparator<br>A &gt; B?</div><div class="wire"></div><div class="block green">MUX</div><div class="wire"></div><div class="block">c</div></div><p>Comparator output S selects A when A&gt;B and B otherwise.</p>'}
+else if(type==='loop'){m.innerHTML='<span class="pill">COUNTING LOOP</span><p><strong>Register/counter + incrementer + comparator + control</strong></p><div class="blockrow"><div class="block">i register</div><div class="wire"></div><div class="block green">Incrementer</div><div class="wire"></div><div class="block amber">i &lt; 8?</div><div class="wire"></div><div class="block">Continue/stop</div></div><p>The comparator controls loop continuation; the counter alone is not enough.</p>'}
+else if(type==='sum'){m.innerHTML='<span class="pill">ARITHMETIC</span><p><strong>Operand registers + adder + result register</strong></p><div class="blockrow"><div class="block">A register</div><div class="wire"></div><div class="block green">4-bit adder</div><div class="wire"></div><div class="block">C register</div></div><p>Adder computes A+B; a register stores the result on a clock edge.</p>'}
+else{m.innerHTML='<span class="pill">CUSTOM CODE</span><p>Identify each operation, condition, variable and update. Common mappings include comparator, MUX, adder, counter and register.</p><p>For a custom snippet, manually check the inferred mapping against the actual semantics before implementing it.</p>'}
+}
+function renderTruth(){let rows='';for(let a=0;a<=1;a++)for(let b=0;b<=1;b++){let s=+(a>b),c=s?a:b,expected=(a>b)?a:b;rows+=`<tr><td>${a}</td><td>${b}</td><td>${s}</td><td>${c}</td><td>${expected}</td><td class="good">${c===expected?'MATCH':'MISMATCH'}</td></tr>`}$('truth').innerHTML=rows}
+function testOne(){let a=+$('a').value,b=+$('b').value,s=+(a>b),c=s?a:b;$('single').textContent=`A=${a}, B=${b} → S=${s} → C=${c} (code result ${c})`}
+function renderLoop(){let rows='';for(let i=0;i<=8;i++){rows+=`<tr><td>${i+1}</td><td>${i}</td><td>${i.toString(2).padStart(4,'0')}</td><td>${i<8?'True':'False'}</td><td>${i<8?'Execute body; increment':'Exit loop'}</td></tr>`}$('loopTable').innerHTML=rows}
+function add(){let a=Math.max(0,Math.min(15,Math.trunc(Number($('aa').value)||0))),b=Math.max(0,Math.min(15,Math.trunc(Number($('bb').value)||0))),r=a+b;$('sum').textContent=`${a} + ${b} = ${r}; 4-bit result ${(r&15).toString(2).padStart(4,'0')}; carry ${r>=16?1:0}.`}
+$('load').onclick=loadExample;$('explain').onclick=()=>{let type=$('example').value;renderMapping(type);if(type==='custom')alert('Rule-based demo: for custom code, use the explanation prompts in the report and verify the inferred circuit in Logisim/CircuitVerse.');};$('clear').onclick=()=>{$('code').value='';$('mapping').innerHTML='<p>Enter code and choose an example to see the hardware mapping.</p>'};$('test').onclick=testOne;$('add').onclick=add;
+loadExample();renderTruth();renderLoop();testOne();add();
+</script></body></html>
