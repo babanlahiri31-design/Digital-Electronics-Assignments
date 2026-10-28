@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4-bit Mini-ALU & Program Counter Simulator</title>
+<style>
+:root{--navy:#17365d;--blue:#2764a5;--bg:#f4f7fb;--green:#177245;--red:#b42318;--border:#d7e0ec}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,sans-serif;color:#172338}
+header{background:linear-gradient(120deg,#17365d,#2874b5);color:white;padding:24px 20px}
+header h1{margin:0 0 8px;font-size:clamp(22px,3vw,32px)}header p{margin:0;opacity:.9}
+main{max-width:1120px;margin:22px auto;padding:0 16px 36px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{background:white;border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 5px 18px #19385c0b}
+.wide{grid-column:1/-1}h2{margin:0 0 14px;color:var(--navy);font-size:20px}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:10px 0}
+label{font-weight:600;font-size:14px}input[type=number]{width:90px;padding:9px;border:1px solid #b8c7da;border-radius:8px;font-size:16px}
+select,button{padding:10px 13px;border-radius:8px;border:1px solid #b8c7da;background:white;font-size:14px;cursor:pointer}
+button.primary{background:var(--blue);color:white;border-color:var(--blue)}button:active{transform:translateY(1px)}
+.result{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.metric{padding:13px;background:#f1f6fc;border-radius:10px;text-align:center}.metric span{display:block;color:#52647b;font-size:12px;margin-bottom:5px}.metric strong{font-size:23px;color:var(--navy)}
+.bits{font-family:Consolas,monospace;letter-spacing:4px;font-size:23px;color:var(--blue);font-weight:bold}
+.gates{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0}.gate{border:2px solid #52749a;border-radius:7px;padding:10px 15px;min-width:82px;text-align:center;font-weight:bold;background:#edf4fc}.wire{height:3px;width:25px;background:#7189a6}.on{color:var(--green)}.off{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}th,td{padding:9px;border:1px solid var(--border);text-align:center}th{background:#eaf1fa;color:var(--navy)}tbody tr:nth-child(even){background:#f8fafd}
+.status{padding:10px 12px;border-radius:8px;background:#eef6ff;margin-top:10px}.muted{color:#61728a;font-size:13px;line-height:1.5}.pcdisplay{font-family:Consolas,monospace;font-size:30px;font-weight:bold;letter-spacing:5px;color:var(--green)}
+@media(max-width:760px){main{grid-template-columns:1fr}.wide{grid-column:auto}.result{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header><h1>4-bit Mini-ALU & Program Counter</h1><p>Interactive digital logic simulator • Lab Assignment 8</p></header>
+<main>
+<section class="card"><h2>1. ALU Inputs</h2>
+<div class="row"><label for="a">Operand A (0–15)</label><input id="a" type="number" min="0" max="15" value="7"></div>
+<div class="row"><label for="b">Operand B (0–15)</label><input id="b" type="number" min="0" max="15" value="3"></div>
+<div class="row"><label for="mode">Operation</label><select id="mode"><option value="add">ADD (A + B)</option><option value="sub">SUB (A − B)</option></select><button class="primary" id="calculate">Calculate</button></div>
+<p class="muted">The result is limited to 4 bits. ADD shows carry-out; SUB uses two's-complement subtraction and shows a borrow indicator when A &lt; B.</p>
+<div class="result"><div class="metric"><span>Decimal result</span><strong id="dec">10</strong></div><div class="metric"><span>4-bit result</span><strong class="bits" id="bits">1010</strong></div><div class="metric"><span id="flagname">Carry out</span><strong id="flag">0</strong></div></div>
+<div class="gates"><div class="gate">A[3:0]</div><div class="wire"></div><div class="gate" id="gate1">Adder</div><div class="wire"></div><div class="gate">Result[3:0]</div></div>
+<div class="gates"><div class="gate">B[3:0]</div><div class="wire"></div><div class="gate">Mode MUX</div><div class="wire"></div><div class="gate" id="gate2">ADD</div></div>
+<div class="status" id="aluStatus">ALU ready.</div></section>
+<section class="card"><h2>2. 4-bit Program Counter</h2>
+<p class="muted">A 4-bit register stores the current instruction address. On an enabled clock pulse, PC increments modulo 16. Reset clears PC to 0000.</p>
+<div class="row"><label><input type="checkbox" id="enable" checked> Enable</label><label><input type="checkbox" id="reset"> Reset</label></div>
+<div class="pcdisplay" id="pcBits">0000</div><p>PC decimal: <strong id="pcDec">0</strong></p>
+<div class="row"><button class="primary" id="clock">Clock Pulse ↑</button><button id="pcReset">Reset PC</button><button id="auto">Start Auto Clock</button></div>
+<div class="status" id="pcStatus">PC is waiting for a clock pulse.</div>
+<table><thead><tr><th>Clock event</th><th>Enable</th><th>PC before</th><th>PC after</th></tr></thead><tbody id="pcLog"><tr><td colspan="5">No clock pulses yet.</td></tr></tbody></table></section>
+<section class="card wide"><h2>3. Hardware Mapping: Code to Circuit</h2>
+<p><strong>Example code:</strong> <code>c = a + b;</code></p>
+<div class="gates"><div class="gate">Register A</div><div class="wire"></div><div class="gate">4-bit ALU</div><div class="wire"></div><div class="gate">Register C</div></div>
+<p><strong>Example loop:</strong> <code>for (i = 0; i &lt; 8; i++)</code></p>
+<div class="gates"><div class="gate">Clock</div><div class="wire"></div><div class="gate">Enable / Reset</div><div class="wire"></div><div class="gate">4-bit PC</div><div class="wire"></div><div class="gate">Address bits</div></div>
+<p class="muted">The ALU performs arithmetic. Operand registers hold values. The program counter tracks the sequence/address of instructions; the enable input represents advancing to the next iteration. This educational model illustrates the mapping, not a complete CPU instruction decoder.</p></section>
+<section class="card wide"><h2>4. 4-bit Arithmetic Verification</h2>
+<p class="muted">Select operands and operation above to verify any combination. The output wraps to 0–15, matching a 4-bit result bus.</p>
+<table><thead><tr><th>Operation</th><th>Expression</th><th>Result range</th><th>Extra flag</th></tr></thead><tbody>
+<tr><td>Addition</td><td>A + B</td><td>(A + B) mod 16</td><td>Carry = 1 if A + B ≥ 16</td></tr>
+<tr><td>Subtraction</td><td>A − B</td><td>(A − B) mod 16</td><td>Borrow = 1 if A &lt; B</td></tr>
+</tbody></table>
+<h2 style="margin-top:22px">5. Recent PC Events</h2><p class="muted">The log records the latest counter pulses so you can include test evidence in your report.</p></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);let pc=0,timer=null,events=[];
+function val(id){let n=Number($(id).value);if(!Number.isFinite(n))n=0;return Math.max(0,Math.min(15,Math.trunc(n)))}
+function bin4(n){return (n&15).toString(2).padStart(4,'0')}
+function calc(){let a=val('a'),b=val('b'),sub=$('mode').value==='sub';let raw=sub?a-b:a+b;let result=raw&15;let flag=sub?(a<b?1:0):(raw>=16?1:0);
+$('dec').textContent=result;$('bits').textContent=bin4(result);$('flagname').textContent=sub?'Borrow':'Carry out';$('flag').textContent=flag;
+$('gate1').textContent=sub?'Subtractor':'Adder';$('gate2').textContent=sub?'SUB':'ADD';
+$('aluStatus').innerHTML=`<strong>${sub?'SUBTRACT':'ADD'}:</strong> ${a} ${sub?'−':'+'} ${b} = ${raw}; 4-bit result = ${result} (${bin4(result)}), ${sub?'borrow':'carry'} = ${flag}.`;}
+function renderPC(){$('pcBits').textContent=bin4(pc);$('pcDec').textContent=pc}
+function logEvent(before,after,enabled,event){events.unshift({before,after,enabled,event});events=events.slice(0,6);$('pcLog').innerHTML=events.map(e=>`<tr><td>${e.event}</td><td>${e.enabled?'1':'0'}</td><td>${bin4(e.before)}</td><td>${bin4(e.after)}</td></tr>`).join('')}
+function pulse(){let before=pc;if($('reset').checked){pc=0;$('pcStatus').textContent='Reset active: PC forced to 0000.'}else if($('enable').checked){pc=(pc+1)&15;$('pcStatus').textContent=`Enabled clock: ${bin4(before)} → ${bin4(pc)}.`}else{$('pcStatus').textContent='Enable is 0: PC holds its current value.'}renderPC();logEvent(before,pc,$('enable').checked,'Clock pulse')}
+$('calculate').addEventListener('click',calc);['a','b','mode'].forEach(id=>$(id).addEventListener('change',calc));
+$('clock').addEventListener('click',pulse);$('pcReset').addEventListener('click',()=>{pc=0;$('reset').checked=true;renderPC();$('pcStatus').textContent='PC reset to 0000.';logEvent(pc,pc,$('enable').checked,'Reset')});
+$('reset').addEventListener('change',()=>{if($('reset').checked){pc=0;renderPC();$('pcStatus').textContent='Reset active: PC forced to 0000.'}});
+$('auto').addEventListener('click',()=>{if(timer){clearInterval(timer);timer=null;$('auto').textContent='Start Auto Clock'}else{timer=setInterval(pulse,1000);$('auto').textContent='Stop Auto Clock'}});
+calc();renderPC();
+</script></body></html>
